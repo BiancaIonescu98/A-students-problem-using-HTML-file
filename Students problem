@@ -1,0 +1,352 @@
+import java.util.Arrays;
+
+public class Examen {
+
+	private int totalIntrebari;
+	private double raspunsuriCorecte;
+	private double[] nota = new double[0];
+	private double medie;
+	private int pondere;
+	private String tip;
+
+	public Examen(String tipExamen, String pondereExamen) {
+		String[] splitTipExam = tipExamen.split("\\(");
+		tip = splitTipExam[0];
+		if(splitTipExam.length>1){						
+			setTotalIntrebari(splitTipExam[1].replace(")",""));
+		}
+		pondere = Integer.parseInt(pondereExamen.split("\\[")[1].replace("]",""));
+		
+	}
+
+	private void setTotalIntrebari(String value) {
+		totalIntrebari = Integer.parseInt(value);
+	}
+
+	public int getTotalIntrebari() {
+		return totalIntrebari;
+	}
+
+	public void setRaspunsuriCorecte(String value) {
+		raspunsuriCorecte = Double.parseDouble(value);
+	}
+
+	public double getRaspunsuriCorecte() {
+		return raspunsuriCorecte;
+	}
+
+	public double getMedia() {
+		return medie;
+	}
+
+	public double getPondere() {
+		return pondere;
+	}
+
+	public String getTip() {
+		return tip;
+	}
+
+	public void setNota(String value) {
+		nota = Arrays.copyOf(nota, nota.length + 1);
+		nota[nota.length - 1] = Double.parseDouble(value);
+	}
+
+	public double[] getNota(){
+		return nota;
+	}
+}
+
+
+import java.text.DecimalFormat;
+
+public class examResult {
+
+	public static double calculMediaG(double note, int totalIntrebari) {
+		double result = note / totalIntrebari * 10;
+		return roundTwo(result);
+	}
+
+	public static double calculMediaP(double[] note) {
+		double sumaNote = 0;
+		for (double d : note) {
+			sumaNote = sumaNote + d;
+		}
+		return sumaNote/note.length;
+	}
+	
+	private static double roundTwo(double value){
+		DecimalFormat f = new DecimalFormat("##.00");
+		return Double.parseDouble(f.format(value));
+	}
+
+}
+
+
+
+import java.io.FileWriter;
+
+import java.io.IOException;
+
+public class FileOutput {
+	private int headerLength = 0;
+	private String htmlPath = "";
+	private String memoryBuffer = "";
+
+	public FileOutput(String path) {
+		htmlPath = path;
+		beginingDocument();
+	}
+
+	private void beginingDocument() {
+		memoryBuffer = "<!DOCTYPE html>" + "<html>" + "<head>" + "<style>"
+				+ "table, th, td {border: 1px solid black;}" + "</style>"
+				+ "</head>" + "<body>" + "<h2>Tabel note studenti:</h2>"
+				+ "<table>";
+	}
+
+	public void writeTableHeader(String examResult) {
+		memoryBuffer = memoryBuffer + "<tr>";
+		String[] arrayHeader = examResult.split(",");
+		headerLength = arrayHeader.length;
+		for (int i = 0; i < headerLength; i++) {
+			memoryBuffer = memoryBuffer + "<th>" + arrayHeader[i] + "</th>";
+		}
+		memoryBuffer = memoryBuffer + "</tr>";
+	}
+
+	public void writeTableHeaderCollection(Examen[] exams) {
+		memoryBuffer = memoryBuffer + "<tr>";
+		// String[] arrayHeader = examResult.split(",");
+		memoryBuffer = memoryBuffer + "<th>" + "Nume student" + "</th>";
+		for (int i = 0; i < exams.length; i++) {
+			memoryBuffer = memoryBuffer + "<th>" + exams[i].getTip() + "</th>";
+		}
+		memoryBuffer = memoryBuffer + "<th>" + "Media" + "</th>";
+		
+		memoryBuffer = memoryBuffer + "<th>" + "Clasament" + "</th>";
+		
+		memoryBuffer = memoryBuffer + "</tr>";
+	}
+
+	public void writeTableData(String examResult) {
+		memoryBuffer = memoryBuffer + "<tr>" + examResult + "</tr>";
+	}
+	
+	private void endDocument(){
+		memoryBuffer = memoryBuffer + "</table></html>";
+	}
+
+	public void saveDocument() {
+		endDocument();
+		try {
+			FileWriter myWriter = new FileWriter(htmlPath);
+			myWriter.write(memoryBuffer);
+			myWriter.close();
+			System.out.println("Successfully wrote to the file.");
+		} catch (IOException e) {
+			System.out.println("An error occurred.");
+			e.printStackTrace();
+		}
+	}
+
+}
+
+
+
+
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
+
+public class ReadFile {
+
+	public static void main(String[] args) throws FileNotFoundException {
+		File myInputFile = new File("InputFile.txt");
+		Scanner myReader = new Scanner(myInputFile.getAbsoluteFile());
+		int inputLineNo = 1;
+		String studentName;
+		String examType;
+		FileOutput htmlFile = new FileOutput(myInputFile.getPath()
+				+ "Test.html");
+
+		Students[] students = new Students[0];
+		Examen[] exams = new Examen[0];
+
+		while (myReader.hasNextLine()) {
+			if (inputLineNo == 1) {
+				studentName = myReader.nextLine();
+				String[] arrayStudents = studentName.split(",");
+				students = new Students[arrayStudents.length];
+
+				for (int i = 0; i < arrayStudents.length; i++) {
+					students[i] = new Students(arrayStudents[i].trim());
+				}
+
+				inputLineNo++;
+			}
+			if (inputLineNo == 2) {
+				examType = myReader.nextLine();
+				examType = examType.replace("[", ";[");
+				String[] arrayExamType = examType.split(",");
+				exams = new Examen[arrayExamType.length];
+
+				for (int i = 0; i < arrayExamType.length; i++) {
+					String[] splitExam = arrayExamType[i].split(";");
+					exams[i] = new Examen(splitExam[0].trim(),
+							splitExam[1].trim());
+
+					for (int idx = 0; idx < students.length; idx++) {
+						students[idx].setExamen(new Examen(splitExam[0].trim(),
+								splitExam[1].trim()));
+					}
+				}
+
+				htmlFile.writeTableHeaderCollection(exams);
+				inputLineNo++;
+			} else {
+				String examResult = myReader.nextLine();
+				System.out.println(examResult);
+				String[] arrayExamResult = examResult.split(",");
+
+				for (int index = 0; index < students.length; index++) {
+					if (students[index].Nume().equals(arrayExamResult[0])) {
+						for (int j = 2; j < arrayExamResult.length; j++) {
+							students[index].getExamByType(arrayExamResult[1])
+									.setNota(arrayExamResult[j]);
+						}
+					}
+				}
+			}
+		}
+		myReader.close();
+
+		int indexStudent = 0;
+		
+		while (indexStudent < students.length) {
+			int nrNote=0;
+			double mediaExamen=0;
+			double mediaGenerala=0;
+			String newLine = "<td>" + students[indexStudent].Nume() + "</td>";
+			for (int i = 0; i < students[indexStudent].getExamene().length; i++) {
+				Examen studentEx = students[indexStudent].getExamene()[i];
+				String tipEx = studentEx.getTip();
+				double[] note = studentEx.getNota();
+
+				if (note.length > 0) {
+					switch (tipEx.substring(0, 1)) {
+					case "G":
+						double mediaG = examResult.calculMediaG(note[0],
+								studentEx.getTotalIntrebari());
+						newLine = newLine + "<td>" + mediaG + "</td>";
+						nrNote++;
+						mediaExamen+=mediaG;
+					break;
+
+					case "P":
+						double mediaP = examResult.calculMediaP(note);
+						String mediaAr = Double.toString(mediaP) + "(";
+						for (double d : note) {
+							mediaAr = mediaAr + Double.toString(d) + "-";
+						}
+						mediaAr = mediaAr.substring(0, mediaAr.length() - 1)
+								+ ")";
+						newLine = newLine + "<td>" + mediaAr + "</td>";
+						nrNote++;
+						mediaExamen+=mediaP;
+						break;
+					}
+				} else {
+					newLine = newLine + "<td>--</td>";
+				}
+				
+				mediaGenerala=mediaExamen/nrNote;
+			}
+			
+			newLine = newLine + "<td>" + Math.round(mediaGenerala) + "</td>"; 
+			String Premiu="";
+			if(Math.round(mediaGenerala) > 7){
+				Premiu = "Premiul al I-lea";
+			}else
+				if(Math.round(mediaGenerala) >= 6){
+					Premiu = "Premiul al II-lea";
+				}else
+					if(Math.round(mediaGenerala) >= 5){
+						Premiu = "Premiul al III-lea";
+					}
+			
+			newLine = newLine + "<td>" + Premiu + "</td>";
+			
+			htmlFile.writeTableData(newLine);
+			indexStudent++;
+			
+		}
+
+		htmlFile.saveDocument();
+	}
+
+}
+
+
+
+import java.util.Arrays;
+
+public class Students {
+
+	String nume;
+	private Examen examen;
+	private Examen[] tipExamen = new Examen[0];
+	String note;
+
+	public Students(String studentName) {
+		nume = studentName;
+	}
+
+	public String Nume() {
+		return nume;
+	}
+
+	public Examen getExamByType(String value){
+		for(int i=0; i<tipExamen.length; i++){
+			System.out.println(tipExamen[i].getTip());
+			System.out.println(value.trim());
+			if(tipExamen[i].getTip().equals(value.trim())){
+				return tipExamen[i];
+			}
+		}
+		return null;
+	}
+	
+	public void setRezultateExamen(Examen value, String setTipExamen){
+		for(int i=0; i<tipExamen.length; i++){
+			if (tipExamen[i].getTip() == setTipExamen){
+				tipExamen[i] = value;
+			}
+		}
+	}
+	
+	public void setExamen(Examen value){
+		tipExamen = (Examen[]) Arrays.copyOf(tipExamen, tipExamen.length + 1);
+		examen = value;
+		tipExamen[tipExamen.length-1] = examen;
+	}
+	
+	public Examen[] getExamene()
+	{
+		return tipExamen;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
